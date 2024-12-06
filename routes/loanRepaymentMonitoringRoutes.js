@@ -1,11 +1,11 @@
 const express = require('express');
-const loanServiceController = require('../controllers/loanServiceController');
+const loanRepaymentMonitoringController = require('../controllers/loanRepaymentMonitoringController');
 const router = express.Router();
 
-router.post('/', loanServiceController.createLoanRepayment);
-router.get('/', loanServiceController.getAllLoanRepayments);
-router.get('/:id', loanServiceController.getLoanRepaymentById);
-router.put('/:id', loanServiceController.updateLoanRepayment);
-router.delete('/:id', loanServiceController.deleteLoanRepayment);
+router.post('/', loanRepaymentMonitoringController.createLoanRepayment);
+router.get('/', loanRepaymentMonitoringController.getAllLoanRepayments);
+router.get('/:id', loanRepaymentMonitoringController.getLoanRepaymentById);
+router.put('/:id', loanRepaymentMonitoringController.updateLoanRepayment);
+router.delete('/:id', loanRepaymentMonitoringController.deleteLoanRepayment);
 
 module.exports = router;

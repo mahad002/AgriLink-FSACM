@@ -1,5 +1,5 @@
 const express = require('express');
-const loanServiceController = require('../controllers/loanServiceController');
+const loanServiceController = require('../controllers/loanApplicationController');
 const router = express.Router();
 
 // CRUD routes for loan applications

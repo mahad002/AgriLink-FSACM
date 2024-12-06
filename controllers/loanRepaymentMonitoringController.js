@@ -11,15 +11,15 @@ exports.createLoanRepayment = async (req, res) => {
     try {
         // Fetch loan details from the central microservice
         const loanResponse = await axios.get(`${BASE_URL}/loan-applications/${loanId}`);
-        const loan = loanResponse.data?.data;
+        const loanDetails = loanResponse.data?.data;
 
-        if (!loan) {
+        if (!loanDetails) {
             return res.status(404).json({ message: 'Loan not found' });
         }
 
         // Create a Stripe payment intent
         const paymentIntent = await stripe.paymentIntents.create({
-            amount: amountPaid * 100,
+            amount: amountPaid * 100, // Stripe accepts amount in cents
             currency: 'pkr',
             payment_method: paymentMethodId,
             customer: customerId,
@@ -36,14 +36,14 @@ exports.createLoanRepayment = async (req, res) => {
         }
 
         // Update loan's remaining balance
-        loan.remainingBalance -= amountPaid;
-        if (loan.remainingBalance <= 0) {
-            loan.remainingBalance = 0;
-            loan.status = 'completed';
+        loanDetails.remainingBalance -= amountPaid;
+        if (loanDetails.remainingBalance <= 0) {
+            loanDetails.remainingBalance = 0;
+            loanDetails.status = 'completed';
         }
 
         // Save updated loan data in the central microservice
-        await axios.put(`${BASE_URL}/loanapplications/${loanId}`, loan);
+        await axios.put(`${BASE_URL}/loan-applications/${loanId}`, loanDetails);
 
         // Save repayment details in the central microservice
         const repaymentResponse = await axios.post(`${BASE_URL}/loan-repayments`, {
@@ -51,7 +51,7 @@ exports.createLoanRepayment = async (req, res) => {
             loanId,
             repaymentDate: repaymentDate || new Date(),
             amountPaid,
-            remainingBalance: loan.remainingBalance,
+            remainingBalance: loanDetails.remainingBalance,
             status: 'completed',
         });
 
@@ -59,7 +59,7 @@ exports.createLoanRepayment = async (req, res) => {
             success: true,
             message: 'Loan repayment processed successfully',
             repayment: repaymentResponse.data?.data,
-            loan,
+            loan: loanDetails,
         });
     } catch (error) {
         console.error('Repayment error:', error);
@@ -77,7 +77,8 @@ exports.getAllLoanRepayments = async (req, res) => {
         const response = await axios.get(`${BASE_URL}/loan-repayments`, { params: req.query });
         res.json(response.data);
     } catch (error) {
-        res.status(error.response?.status || 500).json({ error: error.response?.data || error.message });
+        console.error('Error fetching all loan repayments:', error);
+        res.status(500).json({ error: error.response?.data || error.message });
     }
 };
 
@@ -87,7 +88,8 @@ exports.getLoanRepaymentById = async (req, res) => {
         const response = await axios.get(`${BASE_URL}/loan-repayments/${req.params.id}`);
         res.json(response.data);
     } catch (error) {
-        res.status(error.response?.status || 500).json({ error: error.response?.data || error.message });
+        console.error('Error fetching loan repayment by ID:', error);
+        res.status(500).json({ error: error.response?.data || error.message });
     }
 };
 
@@ -107,9 +109,9 @@ exports.updateLoanRepayment = async (req, res) => {
 
         // Fetch the associated loan details
         const loanResponse = await axios.get(`${BASE_URL}/loan-applications/${existingRepayment.loanId}`);
-        const loan = loanResponse.data?.data;
+        const loanDetails = loanResponse.data?.data;
 
-        if (!loan) {
+        if (!loanDetails) {
             return res.status(404).json({ message: 'Associated loan application not found' });
         }
 
@@ -119,22 +121,22 @@ exports.updateLoanRepayment = async (req, res) => {
 
         // Adjust the loan's remaining balance
         const balanceAdjustment = updatedRepayment.amountPaid - existingRepayment.amountPaid;
-        loan.remainingBalance -= balanceAdjustment;
+        loanDetails.remainingBalance -= balanceAdjustment;
 
         // Check if the loan is fully repaid
-        if (loan.remainingBalance <= 0) {
-            loan.remainingBalance = 0;
-            loan.status = 'completed';
+        if (loanDetails.remainingBalance <= 0) {
+            loanDetails.remainingBalance = 0;
+            loanDetails.status = 'completed';
         }
 
         // Save updated loan details in the central microservice
-        await axios.put(`${BASE_URL}/loan-applications/${loan._id}`, loan);
+        await axios.put(`${BASE_URL}/loan-applications/${loanDetails._id}`, loanDetails);
 
         res.json({
             success: true,
             message: 'Loan repayment updated successfully',
             updatedRepayment,
-            updatedLoan: loan,
+            updatedLoan: loanDetails,
         });
     } catch (error) {
         console.error('Error updating loan repayment:', error);
@@ -152,6 +154,7 @@ exports.deleteLoanRepayment = async (req, res) => {
         const repaymentResponse = await axios.delete(`${BASE_URL}/loan-repayments/${req.params.id}`);
         res.json(repaymentResponse.data);
     } catch (error) {
-        res.status(error.response?.status || 500).json({ error: error.response?.data || error.message });
+        console.error('Error deleting loan repayment:', error);
+        res.status(500).json({ error: error.response?.data || error.message });
     }
 };

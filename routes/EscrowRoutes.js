@@ -1,5 +1,5 @@
 const express = require('express');
-const escrowServiceController = require('../controllers/escrowServiceController');
+const escrowServiceController = require('../controllers/escrowController');
 const router = express.Router();
 
 router.post('/escrow/create', escrowServiceController.createEscrow);
